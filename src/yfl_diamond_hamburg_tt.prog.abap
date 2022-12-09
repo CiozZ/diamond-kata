@@ -14,7 +14,12 @@ CLASS diamond_kata DEFINITION FINAL.
              spacing     TYPE i,
            END OF ty_whitespaces.
 
+    TYPES: BEGIN OF ty_character,
+             value TYPE c LENGTH 1,
+           END OF ty_character.
+
     TYPES tt_whitespaces TYPE STANDARD TABLE OF ty_whitespaces WITH EMPTY KEY.
+    TYPES tt_characters  TYPE STANDARD TABLE OF ty_character WITH EMPTY KEY.
 
     METHODS print
       IMPORTING seed          TYPE c
@@ -33,6 +38,15 @@ CLASS diamond_kata DEFINITION FINAL.
     METHODS generate_layer
       IMPORTING iv_character     TYPE string
                 is_whitespaces   TYPE ty_whitespaces
+      RETURNING VALUE(rv_result) TYPE string.
+
+    METHODS generate_unique_layers
+      IMPORTING it_characters    TYPE tt_characters
+                it_whitespaces   TYPE tt_whitespaces
+      RETURNING VALUE(rt_result) TYPE stringtab.
+
+    METHODS build_diamond
+      IMPORTING it_layers        TYPE stringtab
       RETURNING VALUE(rv_result) TYPE string.
 
   PRIVATE SECTION.
@@ -62,6 +76,28 @@ CLASS diamond_kata IMPLEMENTATION.
     rv_result = |{ rv_result }{ iv_character ALIGN = RIGHT WIDTH = is_whitespaces-spacing + 1 }|.
   ENDMETHOD.
 
+  METHOD generate_unique_layers.
+    DO lines( it_characters ) TIMES.
+      DATA(generated) = generate_layer( iv_character = CONV #( it_characters[ sy-index ]-value ) is_whitespaces = it_whitespaces[ sy-index ] ).
+      APPEND generated TO rt_result.
+    ENDDO.
+  ENDMETHOD.
+
+  METHOD build_diamond.
+    DATA(layers) = it_layers.
+    LOOP AT layers INTO DATA(layer) .
+      layer = |{ |\n| }{ layer }|.
+      rv_result = |{ rv_result }{ layer }|.
+    ENDLOOP.
+
+    DATA(from) = lines( layers ) - 2.
+
+    LOOP AT layers FROM from INTO layer TO lines( layers ).
+      rv_result = |{ rv_result }{ |\n| }{ layer }|.
+    ENDLOOP.
+
+  ENDMETHOD.
+
 ENDCLASS.
 
 CLASS ltc_diamond_kata DEFINITION FINAL FOR TESTING
@@ -80,6 +116,8 @@ CLASS ltc_diamond_kata DEFINITION FINAL FOR TESTING
     METHODS calc_layer_whitespace_3 FOR TESTING.
     METHODS generate_layers_first   FOR TESTING.
     METHODS generate_layers_non_first FOR TESTING.
+    METHODS generate_layers FOR TESTING.
+    METHODS build_diamond FOR TESTING.
 
 ENDCLASS.
 
@@ -135,6 +173,19 @@ CLASS ltc_diamond_kata IMPLEMENTATION.
   METHOD generate_layers_non_first.
     cl_abap_unit_assert=>assert_equals( exp = |  *   *|
                                         act = mo_cut->generate_layer( iv_character = |*| is_whitespaces = VALUE #( indentation = 2 spacing = 3 ) ) ).
+  ENDMETHOD.
+
+  METHOD generate_layers.
+    cl_abap_unit_assert=>assert_equals( exp = VALUE stringtab( ( | *| )
+                                                               ( |  ! !| ) )
+                                        act = mo_cut->generate_unique_layers( it_characters = VALUE #( ( |*| ) ( |!| ) )
+                                                                              it_whitespaces = VALUE #( ( indentation = 1 spacing = -1 )
+                                                                                                        ( indentation = 2 spacing = 1 ) ) ) ).
+  ENDMETHOD.
+
+  METHOD build_diamond.
+    cl_abap_unit_assert=>assert_equals( exp = |A\nB\nC\nB\nA|
+                                        act = mo_cut->build_diamond( it_layers = VALUE #( ( |A| ) ( |B| ) ( |C| ) ) ) ).
   ENDMETHOD.
 
 ENDCLASS.
