@@ -51,11 +51,18 @@ CLASS diamond_kata DEFINITION FINAL.
 
   PRIVATE SECTION.
 
+    METHODS transpose_string_to_tab
+      IMPORTING iv_string        TYPE string
+      RETURNING VALUE(rt_result) TYPE tt_characters.
+
 ENDCLASS.
 
 CLASS diamond_kata IMPLEMENTATION.
   METHOD print.
-    result = |A|.
+    DATA(layer_chars) = determine_layers( seed ).
+    DATA(layer_whitespaces) = calculate_layer_whitespaces( strlen( layer_chars ) ).
+    DATA(layers) = generate_unique_layers( it_characters = transpose_string_to_tab( layer_chars ) it_whitespaces = layer_whitespaces ).
+    result = build_diamond( layers ).
   ENDMETHOD.
 
   METHOD determine_layers.
@@ -86,16 +93,42 @@ CLASS diamond_kata IMPLEMENTATION.
   METHOD build_diamond.
     DATA(layers) = it_layers.
     LOOP AT layers INTO DATA(layer) .
-      layer = |{ |\n| }{ layer }|.
+      layer = |{ layer }{ |\n| }|.
       rv_result = |{ rv_result }{ layer }|.
     ENDLOOP.
 
-    DATA(from) = lines( layers ) - 2.
+    DATA(from) = lines( layers ) - 1.
+    DATA lower_diamond TYPE string.
 
-    LOOP AT layers FROM from INTO layer TO lines( layers ).
-      rv_result = |{ rv_result }{ |\n| }{ layer }|.
-    ENDLOOP.
+    IF from = 0.
+      RETURN.
+    ENDIF.
 
+    DO.
+      lower_diamond = |{ lower_diamond }{ layers[ from ] }{ |\n| }|.
+      from = from - 1.
+      IF from = 0.
+        EXIT.
+      ENDIF.
+    ENDDO.
+
+    rv_result = |{ rv_result }{ lower_diamond }|.
+    SHIFT rv_result RIGHT DELETING TRAILING |\n|.
+    SHIFT rv_result LEFT DELETING LEADING space.
+
+  ENDMETHOD.
+
+  METHOD transpose_string_to_tab.
+    DATA(string_to_transpose) = iv_string.
+    DO.
+
+      APPEND string_to_transpose(1) TO rt_result.
+      SHIFT string_to_transpose LEFT BY 1 PLACES.
+
+      IF strlen( string_to_transpose ) = 0.
+        RETURN.
+      ENDIF.
+    ENDDO.
   ENDMETHOD.
 
 ENDCLASS.
